@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>NexTrip</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta charset="utf-8">
+		<!-- <meta http-equiv="refresh" content="10" > -->
+		<style>
+			html, body {
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				font-family: arial;
+				font-size: small
+			}
+			#map {
+				width: 80%;
+				height: 80%
+			}
+		</style>
+	</head>
+	<body onload="addRouteList();">
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBiKASAUQqjpqOmf7FcTBFGdF3lImcKwv8&callback=initMap" async defer></script>
+	<script>
+		
+		var map; 
+		var markers = [];
+		var boundsArray = [];
+		var myRouteLayer;
+		
+		function initMap() {
+			map = new google.maps.Map(document.getElementById('map'), {
+				center: {lat: 44.986656, lng: -93.258133},
+				zoom: 11,
+				clickableIcons: false,
+				mapTypeControl: false,
+				maxZoom: 16,
+			});	
+			//Add a clear markers call? Otherwise when does the selected stop get cleared?
+
+		};   
+		
+		function deleteTableRows(ids, t) {
+			// Rework this to delete based on classes. Then I can add NexTrip rows with different ids but the same class.
+			//loop through each row id in ids array
+			for (var i=0; i < ids.length; i++) {
+				//loop through each row in table t
+				for (var j=0; j < t.rows.length; j++) {
+					//if the row id matches an existing row, then delete it
+					if (ids[i] === t.rows[j].id) {t.deleteRow(j)};
+				};
+			};
+		};
+		
+		function addRouteList() {
+			var xhr = new XMLHttpRequest();
+			var url = "https://svc.metrotransit.org/NexTrip/Routes";
+			xhr.open("GET", url, true);
+			xhr.send();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {
+					var table = document.getElementById("tblUserControls");
+					//deleteTableRows(["addNexTripStopRow","addStopsListRow","addDirectionListRow"], table);					
+					var row = table.insertRow();
+					row.id = "addRouteListRow";
+					var cell1 = row.insertCell(0);
+					var cell2 = row.insertCell(1);										
+					var xml = xhr.responseXML;
+					var routeNames = xml.getElementsByTagName("Description"); 
+					var routeValues = xml.getElementsByTagName("Route");
+					cell1.innerHTML = "<b>Route: </b>";
+					cell1.align = "right";
+					cell2.innerHTML = "<select id = \"selectRoute\" onChange=\"selectRoute()\"><option></option></select>";
+					var selectRoutes = document.getElementById('selectRoute');
+					for (var i=0; i < routeNames.length; i++) {
+						var newRoute = document.createElement("option");
+						newRoute.value = routeValues[i].childNodes[0].nodeValue;
+						newRoute.text = routeNames[i].childNodes[0].nodeValue;
+						selectRoutes.add(newRoute);
+					};
+				};
+			};
+		};		
+		
+		function addDirectionList(r) {
+			var xhr = new XMLHttpRequest();
+			var url = "https://svc.metrotransit.org/NexTrip/Directions/" + r;
+			xhr.open("GET", url, true);
+			xhr.send();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {
+					var table = document.getElementById("tblUserControls");
+					deleteTableRows(["addNexTripStopRow","addStopsListRow","addDirectionListRow"], table);					
+					var row = table.insertRow();
+					row.id = "addDirectionListRow";
+					var cell1 = row.insertCell(0);
+					var cell2 = row.insertCell(1);										
+					var xml = xhr.responseXML;
+					var dirNames = xml.getElementsByTagName("Text"); 
+					var dirValues = xml.getElementsByTagName("Value");
+					cell1.innerHTML = "<b>Direction: </b>";
+					cell1.align = "right";
+					cell2.innerHTML = "<select id = \"selectDirections\" onChange=\"addStopsList("+r+")\"><option></option></select>";
+					var selectDirections = document.getElementById('selectDirections');
+					for (var i=0; i < dirNames.length; i++) {
+						var newDirection = document.createElement("option");
+						newDirection.value = dirValues[i].childNodes[0].nodeValue;
+						newDirection.text = dirNames[i].childNodes[0].nodeValue;
+						selectDirections.add(newDirection);
+					};
+				};
+			};
+		};
+		
+		function addStopsList(r) { //called with onChange event on selectDirections list
+			var xhr = new XMLHttpRequest();
+			var selectDirections = document.getElementById("selectDirections");
+			var d = selectDirections.options[selectDirections.selectedIndex].value;
+			var url = "https://svc.metrotransit.org/NexTrip/Stops/" + r + "/" + d;
+			xhr.open("GET", url, true);
+			xhr.send();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {
+					var table = document.getElementById("tblUserControls");
+					deleteTableRows(["addNexTripStopRow","addStopsListRow"], table);
+					var row = table.insertRow();
+					row.id = "addStopsListRow";
+					var cell1 = row.insertCell(0);
+					var cell2 = row.insertCell(1);										
+					var xml = xhr.responseXML;
+					var stopNames = xml.getElementsByTagName("Text"); 
+					var stopCodes = xml.getElementsByTagName("Value");
+					cell1.innerHTML = "<b>Stops: </b>";
+					cell1.align = "right";
+					cell2.innerHTML = "<select id=\"selectStops\" onChange=\"addNexTripStop()\"><option></option></select>";
+					var selectStops = document.getElementById('selectStops');
+					//Loop through all stops
+					for (var i=0; i < stopNames.length; i++) {
+						var newStop = document.createElement("option");
+						newStop.value = stopCodes[i].childNodes[0].nodeValue;
+						newStop.text = stopNames[i].childNodes[0].nodeValue;
+						selectStops.add(newStop);
+					};
+				};
+			};
+		};
+		
+		function plotSelectedStop(s) {
+			//http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/17/query?where=node_id=%27SLDA%27&outFields=node_id&f=pjson
+			var xhr = new XMLHttpRequest();
+			xhr.overrideMimeType("application/json");
+			var url = "http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/17/query?where=node_id=%27"+s+"%27&outSR=4326&outFields=node_id&f=pjson";
+			xhr.open("GET", url, true);
+			xhr.send();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {			
+					var text = xhr.responseText;
+					text = JSON.parse(text);
+					var longitude = text.features[0].geometry.x;
+					var latitude = text.features[0].geometry.y;
+					var myStopLatLng = new google.maps.LatLng([latitude],[longitude]);
+					boundsArray.push(myStopLatLng);
+					
+					/*
+					// This would be nice to plot the stop, but you need to clear existing stops if you change the selection
+					// That requires you to add an object to the array to identify the selected stop versus bus locs
+					// Or to make a new array to hold selected stops and clear that out separately
+					var myStopMarker = new google.maps.Marker({
+						position: myStopLatLng,
+						map: map,
+					});
+					markers.push(myStopMarker);	
+					*/
+					var mapBounds = new google.maps.LatLngBounds();
+					for (var i = 0; i < boundsArray.length; i++) {
+						mapBounds.extend(boundsArray[i]);
+					};
+					map.fitBounds(mapBounds);
+				};
+			};
+		};
+		
+		function addNexTripStop() {
+			var xhr = new XMLHttpRequest();
+			var r = document.getElementById("selectRoute").value;
+			var selectDirections = document.getElementById("selectDirections");
+				var d = selectDirections.options[selectDirections.selectedIndex].value;
+			var selectStops = document.getElementById("selectStops");
+				var s = selectStops.options[selectStops.selectedIndex].value;			
+			var url = "https://svc.metrotransit.org/NexTrip/" + r + "/" + d + "/" + s;
+			xhr.open("GET", url, true);
+			xhr.send();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {			
+					var xml = xhr.responseXML;
+					var upcomingDepartures = xml.getElementsByTagName("DepartureText"); 
+					var upcomingLatitudes = xml.getElementsByTagName("VehicleLatitude");
+					var upcomingLongitudes = xml.getElementsByTagName("VehicleLongitude");
+					
+					var table = document.getElementById("tblUserControls");
+					deleteTableRows(["addNexTripStopRow"], table);
+					var row = table.insertRow();
+					row.id = "addNexTripStopRow";
+					var cell1 = row.insertCell(0);
+					cell1.innerHTML = "<b>NexTrip: </b>";
+					cell1.innerHTML += "<br/><br/><a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\"><img src=\"refresh-icon.png\"></a>";
+					cell1.align = "right";
+					cell1.style.verticalAlign = "top";
+					var cell2 = row.insertCell(1);
+					cell2.style.verticalAlign = "top";
+					cell2.innerHTML += upcomingDepartures[0].childNodes[0].nodeValue;
+					cell2.innerHTML += "<br/>" + upcomingDepartures[1].childNodes[0].nodeValue;
+					cell2.innerHTML += "<br/>" + upcomingDepartures[2].childNodes[0].nodeValue;
+					
+					var latitude = upcomingLatitudes[0].childNodes[0].nodeValue;
+					var longitude = upcomingLongitudes[0].childNodes[0].nodeValue;
+					var myUpcomingLatLng = new google.maps.LatLng([latitude],[longitude]);
+					if (boundsArray.length > 0) {boundsArray = []}; // clear if we have an upcoming bus and a selected stop already
+					boundsArray.push(myUpcomingLatLng);
+					
+					//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
+					//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
+					
+					plotSelectedStop(s);
+				};
+			};
+		};
+	
+	
+		// Removes the markers from the map.
+		function clearMarkers() {
+			for (var i = 0; i < markers.length; i++) {
+				markers[i].setMap(null);
+			};
+			markers = [];
+		};
+	
+		function selectRoute() {
+			// Isolate the vehicle locations and put that in its own function so that you can do that without creating directions etc all over
+			clearMarkers();
+			var myRoute = document.getElementById("selectRoute").value;
+			addDirectionList(myRoute);
+			if (myRouteLayer) {myRouteLayer.setMap(null)};
+			myRouteLayer = new google.maps.KmlLayer({
+					url: 'http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/15/query?where=route%3D' + myRoute + '&f=kmz',
+					map: map,
+					clickable: false
+				});
+			var xhr = new XMLHttpRequest();
+			var url = "https://svc.metrotransit.org/NexTrip/VehicleLocations/" + myRoute;
+			xhr.open("GET", url, true);
+			xhr.send();			
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {
+					var xml = xhr.responseXML;
+					
+					//Each bus has a VehicleLocation containing many child elements describing the bus. Store the entire collection in locs.
+					//Can I just skip "VehicleLocation" and go right to "VehicleLatitude", etc like I did with the other APIs?
+					var locs = xml.getElementsByTagName("VehicleLocation"); 
+					
+					//Loop through each VehicleLocation (locs[n]), set up an instance (loc) and store the attributes, such as VehicleLatitude and VehicleLongitude
+					for (var i = 0; i < locs.length; i++) { 
+						var loc = locs[i];
+						var lats = loc.getElementsByTagName("VehicleLatitude");
+						var longs = loc.getElementsByTagName("VehicleLongitude");
+						var datetimes = loc.getElementsByTagName("LocationTime");
+						var directions = loc.getElementsByTagName("Direction");
+						//I'm making the assumption that there are an equal number of every attribute in each "loc" instance (locs[i]) and I'm using lats.length to stand in for the length of any individual collection rather than create a new loop for each attribute collection. This way I loop through once and assign everything. 
+						for (var j = 0; j < lats.length; j++) {
+							var latitude = lats[j].childNodes[0].nodeValue;
+							var longitude = longs[j].childNodes[0].nodeValue;
+							var datetime = datetimes[j].childNodes[0].nodeValue;
+							var time = datetime.substring(datetime.indexOf("T")+1,datetime.length)
+							var directionnumber = Number(directions[j].childNodes[0].nodeValue);
+							var direction;
+							var color;
+							if (directionnumber === 3) {direction="W"; color="blue";} 
+								else if (directionnumber === 2) {direction="E"; color="green";} 
+								else if (directionnumber === 4) {direction="N"; color="blue";} 
+								else if (directionnumber === 1) {direction="S"; color="green";} 
+								else {direction = "X"};
+							var markerLatLng = new google.maps.LatLng([latitude],[longitude]);
+							var markerInfoWindow = new google.maps.InfoWindow({
+								content:'Reported @ ' + time,
+								//position: markerLatLng,
+							});
+							var marker = new google.maps.Marker({
+								position: markerLatLng,
+								infowindow: markerInfoWindow,
+								map: map,
+								title: 'Reported @ ' + time,
+								label: direction,
+								icon: {
+									path: google.maps.SymbolPath.CIRCLE,
+									scale: 10,
+									fillOpacity: 0.3,
+									fillColor: color,
+									strokeColor: 'black',
+									strokeOpacity: 1.0,
+									strokeWeight: 1
+								}
+							});
+							markers.push(marker);
+							google.maps.event.addListener(marker , 'click', function(){
+								this.infowindow.open(map, this);
+							});
+						};
+					};
+				};
+			};
+		};
+	</script>
+
+	<div id="divUserControls" style="background-color: rgba(255, 255, 255, 0.7); border-style: solid; border-color: lightgrey; border-width: 1px; padding: 5px; position: absolute; visibility: visible; left: 3px; top: 3px; z-index:1">
+		<table id="tblUserControls">
+			<tbody>
+
+			<!-- Route dropdown goes here -->
+			</tbody>
+		</table>
+	</div>
+
+	<div id="map" style="position: absolute; visibility: visible; left: 0px; top: 0px; height: 100%; width: 100%; z-index:0"></div>
+	
+	</body>
+</html>
