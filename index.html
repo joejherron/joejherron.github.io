@@ -32,6 +32,7 @@
 		var markers = [];
 		var boundsArray = [];
 		var myRouteLayer;
+		var myRoutePolyline = [];
 		
 		function initMap() {
 			map = new google.maps.Map(document.getElementById('map'), {
@@ -166,7 +167,7 @@
 					var myStopLatLng = new google.maps.LatLng([latitude],[longitude]);
 					boundsArray.push(myStopLatLng);
 					
-					/*
+					
 					// This would be nice to plot the stop, but you need to clear existing stops if you change the selection
 					// That requires you to add an object to the array to identify the selected stop versus bus locs
 					// Or to make a new array to hold selected stops and clear that out separately
@@ -175,7 +176,8 @@
 						map: map,
 					});
 					markers.push(myStopMarker);	
-					*/
+					
+					
 					var mapBounds = new google.maps.LatLngBounds();
 					for (var i = 0; i < boundsArray.length; i++) {
 						mapBounds.extend(boundsArray[i]);
@@ -191,7 +193,7 @@
 			var selectDirections = document.getElementById("selectDirections");
 				var d = selectDirections.options[selectDirections.selectedIndex].value;
 			var selectStops = document.getElementById("selectStops");
-				var s = selectStops.options[selectStops.selectedIndex].value;			
+				var s = selectStops.options[selectStops.selectedIndex].value;
 			var url = "https://svc.metrotransit.org/NexTrip/" + r + "/" + d + "/" + s;
 			xhr.open("GET", url, true);
 			xhr.send();
@@ -239,18 +241,52 @@
 			};
 			markers = [];
 		};
-	
+
+		// Draw the route layer on top of the base map
+		function drawRoute(r) {
+			var xhr = new XMLHttpRequest();
+			xhr.overrideMimeType("application/json");
+			var url = "https://arcgis.metc.state.mn.us/server/rest/services/EnterpriseLibrary/TransitRoutes/FeatureServer/0/query?where=route%3D"+r+"&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&distance=&units=esriSRUnit_Foot&relationParam=&outFields=&returnGeometry=true&maxAllowableOffset=&geometryPrecision=&outSR=4326&having=&gdbVersion=&historicMoment=&returnDistinctValues=false&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&multipatchOption=xyFootprint&resultOffset=&resultRecordCount=&returnTrueCurves=false&returnExceededLimitFeatures=false&quantizationParameters=&returnCentroid=false&sqlFormat=none&resultType=&featureEncoding=esriDefault&f=geojson";
+			xhr.open("GET", url, true);
+			xhr.send();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {			
+					var text = xhr.responseText;
+					text = JSON.parse(text);
+					var coords = text.features[0].geometry.coordinates;
+					// there is a separate array (of coordinates) for each line, x is repping each of those lines
+					for (var x = 0; x < coords.length; x++) {
+							var line = coords[x];
+							var routeCoordinates = [];
+								// we need to push each lat/lng at index "i" to routeCoordinates in order to draw the Polyline
+								for (var i = 0; i < line.length; i++) { 
+									var coord = line[i];
+									var myLatLng = {lat: coord[1], lng: coord[0]};
+									routeCoordinates.push(myLatLng);
+								};
+							var myRouteLayer = new google.maps.Polyline({
+								path: routeCoordinates,
+								strokeWeight: 2
+							});
+							myRouteLayer.setMap(map);
+					};
+					
+				};
+			};
+		};
+		
 		function selectRoute() {
 			// Isolate the vehicle locations and put that in its own function so that you can do that without creating directions etc all over
 			clearMarkers();
 			var myRoute = document.getElementById("selectRoute").value;
 			addDirectionList(myRoute);
-			if (myRouteLayer) {myRouteLayer.setMap(null)};
-			myRouteLayer = new google.maps.KmlLayer({
-					url: 'http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/15/query?where=route%3D' + myRoute + '&f=kmz',
-					map: map,
-					clickable: false
-				});
+			//if (myRouteLayer) {myRouteLayer.setMap(null)};
+			//myRouteLayer = new google.maps.KmlLayer({
+			//		url: 'http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/15/query?where=route%3D' + myRoute + '&f=kmz',
+			//		map: map,
+			//		clickable: false
+			//	});
+			drawRoute(myRoute);
 			var xhr = new XMLHttpRequest();
 			var url = "https://svc.metrotransit.org/NexTrip/VehicleLocations/" + myRoute;
 			xhr.open("GET", url, true);
