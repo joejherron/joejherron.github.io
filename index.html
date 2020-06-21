@@ -29,12 +29,12 @@
 	<script>
 		
 		var map; 
-		var markers = [];
-		var boundsArray = [];
+		var markers = []; //holds the markers for vehicle locations on the selected route
+		var stops = []; //holds the stop chosen from the dropdown
+		var boundsArray = []; //holds the extent of the map boundary
 		//this variable used to hold the KML layer that MetroGIS put out for each route but that has been discontinued
 		//var myRouteLayer;
-		//array variable to store all the polyLines so we can clear them later when we change route
-		var polyLines = [];
+		var polyLines = []; //holds the line segments for the selected route
 		
 		function initMap() {
 			map = new google.maps.Map(document.getElementById('map'), {
@@ -152,8 +152,9 @@
 			};
 		};
 		
-		function plotSelectedStop(s) {
-			//clearMarkers();
+		function plotSelectedStop(s, c) {
+			clearMarkers(stops);
+			stops = [];
 			var xhr = new XMLHttpRequest();
 			xhr.overrideMimeType("application/json");
 			//http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/17/query?where=node_id=%27SLDA%27&outFields=node_id&f=pjson
@@ -168,12 +169,16 @@
 					var latitude = text.features[0].geometry.y;
 					var myStopLatLng = new google.maps.LatLng([latitude],[longitude]);
 					boundsArray.push(myStopLatLng);
-					
+					//var stopInfoWindow = new google.maps.InfoWindow({
+					//	content: 'test',
+					//});
 					var myStopMarker = new google.maps.Marker({
 						position: myStopLatLng,
+					//	infowindow: stopInfoWindow,
 						map: map,
+						animation: google.maps.Animation.DROP,
 					});
-					markers.push(myStopMarker);	
+					stops.push(myStopMarker);	
 					
 					
 					var mapBounds = new google.maps.LatLngBounds();
@@ -192,7 +197,8 @@
 				var d = selectDirections.options[selectDirections.selectedIndex].value;
 			var selectStops = document.getElementById("selectStops");
 				var s = selectStops.options[selectStops.selectedIndex].value;
-			plotSelectedStop(s);
+				var c = selectStops.options[selectStops.selectedIndex].text;
+			plotSelectedStop(s, c);
 			var url = "https://svc.metrotransit.org/NexTrip/" + r + "/" + d + "/" + s;
 			xhr.open("GET", url, true);
 			xhr.send();
@@ -233,11 +239,10 @@
 	
 	
 		// Removes the markers from the map.
-		function clearMarkers(markers) {
-			for (var i = 0; i < markers.length; i++) {
-				markers[i].setMap(null);
+		function clearMarkers(m) {
+			for (var i = 0; i < m.length; i++) {
+				m[i].setMap(null);
 			};
-			markers = [];
 		};
 		
 		//receive an array of Polylines and clear them each individually
@@ -290,6 +295,7 @@
 			map.setZoom(11);
 			// Isolate the vehicle locations and put that in its own function so that you can do that without creating directions etc all over
 			clearMarkers(markers);
+			markers = [];
 			var myRoute = document.getElementById("selectRoute").value;
 			addDirectionList(myRoute);
 			//if (myRouteLayer) {myRouteLayer.setMap(null)};
@@ -341,7 +347,7 @@
 								position: markerLatLng,
 								infowindow: markerInfoWindow,
 								map: map,
-								title: 'Reported @ ' + time,
+								//title: 'Reported @ ' + time,
 								label: direction,
 								icon: {
 									path: google.maps.SymbolPath.CIRCLE,
