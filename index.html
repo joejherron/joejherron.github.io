@@ -31,8 +31,10 @@
 		var map; 
 		var markers = [];
 		var boundsArray = [];
-		var myRouteLayer;
-		var myRoutePolyline = [];
+		//this variable used to hold the KML layer that MetroGIS put out for each route but that has been discontinued
+		//var myRouteLayer;
+		//array variable to store all the polyLines so we can clear them later when we change route
+		var polyLines = [];
 		
 		function initMap() {
 			map = new google.maps.Map(document.getElementById('map'), {
@@ -42,7 +44,6 @@
 				mapTypeControl: false,
 				maxZoom: 16,
 			});	
-			//Add a clear markers call? Otherwise when does the selected stop get cleared?
 
 		};   
 		
@@ -152,10 +153,10 @@
 		};
 		
 		function plotSelectedStop(s) {
-			//http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/17/query?where=node_id=%27SLDA%27&outFields=node_id&f=pjson
-			clearMarkers();
+			//clearMarkers();
 			var xhr = new XMLHttpRequest();
 			xhr.overrideMimeType("application/json");
+			//http://gis2.metc.state.mn.us/arcgis/rest/services/MetroGIS/Transit/MapServer/17/query?where=node_id=%27SLDA%27&outFields=node_id&f=pjson
 			var url = "https://arcgis.metc.state.mn.us/server/rest/services/EnterpriseLibrary/TransitStops/FeatureServer/0/query?where=node_id=%27"+s+"%27&outSR=4326&outFields=node_id&f=pjson";
 			xhr.open("GET", url, true);
 			xhr.send();
@@ -168,10 +169,6 @@
 					var myStopLatLng = new google.maps.LatLng([latitude],[longitude]);
 					boundsArray.push(myStopLatLng);
 					
-					
-					// This would be nice to plot the stop, but you need to clear existing stops if you change the selection
-					// That requires you to add an object to the array to identify the selected stop versus bus locs
-					// Or to make a new array to hold selected stops and clear that out separately
 					var myStopMarker = new google.maps.Marker({
 						position: myStopLatLng,
 						map: map,
@@ -195,6 +192,7 @@
 				var d = selectDirections.options[selectDirections.selectedIndex].value;
 			var selectStops = document.getElementById("selectStops");
 				var s = selectStops.options[selectStops.selectedIndex].value;
+			plotSelectedStop(s);
 			var url = "https://svc.metrotransit.org/NexTrip/" + r + "/" + d + "/" + s;
 			xhr.open("GET", url, true);
 			xhr.send();
@@ -228,23 +226,30 @@
 					
 					//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
 					//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
-					
-					plotSelectedStop(s);
+				
 				};
 			};
 		};
 	
 	
 		// Removes the markers from the map.
-		function clearMarkers() {
+		function clearMarkers(markers) {
 			for (var i = 0; i < markers.length; i++) {
 				markers[i].setMap(null);
 			};
 			markers = [];
 		};
+		
+		//receive an array of Polylines and clear them each individually
+		function clearPolyLines(p) {
+			for (i=0; i<p.length; i++) {            
+				p[i].setMap(null); //or line[i].setVisible(false);
+			};
+		};
 
 		// Draw the route layer on top of the base map
 		function drawRoute(r) {
+			clearPolyLines(polyLines);
 			var xhr = new XMLHttpRequest();
 			xhr.overrideMimeType("application/json");
 			var url = "https://arcgis.metc.state.mn.us/server/rest/services/EnterpriseLibrary/TransitRoutes/FeatureServer/0/query?where=route%3D"+r+"&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&distance=&units=esriSRUnit_Foot&relationParam=&outFields=&returnGeometry=true&maxAllowableOffset=&geometryPrecision=&outSR=4326&having=&gdbVersion=&historicMoment=&returnDistinctValues=false&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&multipatchOption=xyFootprint&resultOffset=&resultRecordCount=&returnTrueCurves=false&returnExceededLimitFeatures=false&quantizationParameters=&returnCentroid=false&sqlFormat=none&resultType=&featureEncoding=esriDefault&f=geojson";
@@ -255,7 +260,7 @@
 					var text = xhr.responseText;
 					text = JSON.parse(text);
 					var coords = text.features[0].geometry.coordinates;
-					// there is a separate array (of coordinates) for each line, x is repping each of those lines
+					// there is a separate array (of coordinates) for each polyline, x is repping each of those polylines
 					for (var x = 0; x < coords.length; x++) {
 							var line = coords[x];
 							var routeCoordinates = [];
@@ -265,11 +270,13 @@
 									var myLatLng = {lat: coord[1], lng: coord[0]};
 									routeCoordinates.push(myLatLng);
 								};
-							var myRouteLayer = new google.maps.Polyline({
+							var myRoutePolyLine = new google.maps.Polyline({
 								path: routeCoordinates,
 								strokeWeight: 2
 							});
-							myRouteLayer.setMap(map);
+							myRoutePolyLine.setMap(map);
+							//add this line to the polyLines array:
+							polyLines.push(myRoutePolyLine);
 					};
 					
 				};
@@ -278,7 +285,7 @@
 		
 		function selectRoute() {
 			// Isolate the vehicle locations and put that in its own function so that you can do that without creating directions etc all over
-			clearMarkers();
+			clearMarkers(markers);
 			var myRoute = document.getElementById("selectRoute").value;
 			addDirectionList(myRoute);
 			//if (myRouteLayer) {myRouteLayer.setMap(null)};
