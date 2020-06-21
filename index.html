@@ -198,7 +198,6 @@
 			var selectStops = document.getElementById("selectStops");
 				var s = selectStops.options[selectStops.selectedIndex].value;
 				var c = selectStops.options[selectStops.selectedIndex].text;
-			plotSelectedStop(s, c);
 			var url = "https://svc.metrotransit.org/NexTrip/" + r + "/" + d + "/" + s;
 			xhr.open("GET", url, true);
 			xhr.send();
@@ -215,25 +214,32 @@
 					row.id = "addNexTripStopRow";
 					var cell1 = row.insertCell(0);
 					cell1.innerHTML = "<b>NexTrip: </b>";
-					cell1.innerHTML += "<br/><br/><a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
+					//cell1.innerHTML += "<br/><br/><a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
 					cell1.align = "right";
 					cell1.style.verticalAlign = "top";
 					var cell2 = row.insertCell(1);
 					cell2.style.verticalAlign = "top";
 					cell2.innerHTML += upcomingDepartures[0].childNodes[0].nodeValue;
+					//add the refresh icon next to the first upcoming departure
+					cell2.innerHTML += "&nbsp&nbsp<a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
 					cell2.innerHTML += "<br/>" + upcomingDepartures[1].childNodes[0].nodeValue;
 					cell2.innerHTML += "<br/>" + upcomingDepartures[2].childNodes[0].nodeValue;
-					
+					//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
+					//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
+					//The above pattern was discontinued, I could try this: https://www.metrotransit.org/nextrip/11/1/LW2S where LW2S is the Node ID, 11 is the route, and 1 is the direction. 
+					//add a link to MetroTransit for more departure times
+					var urlMore = "https://www.metrotransit.org/nextrip/" + r + "/" + d + "/" + s;
+					cell2.innerHTML+="<br><a target=\"_blank\" href=\""+urlMore+"\">(More)</a>";
 					var latitude = upcomingLatitudes[0].childNodes[0].nodeValue;
 					var longitude = upcomingLongitudes[0].childNodes[0].nodeValue;
 					var myUpcomingLatLng = new google.maps.LatLng([latitude],[longitude]);
 					if (boundsArray.length > 0) {boundsArray = []}; // clear if we have an upcoming bus and a selected stop already
 					boundsArray.push(myUpcomingLatLng);
 					
-					//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
-					//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
+
 				
 				};
+			plotSelectedStop(s, c);
 			};
 		};
 	
