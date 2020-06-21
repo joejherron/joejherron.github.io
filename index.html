@@ -190,7 +190,10 @@
 					});
 					google.maps.event.addListener(myStopMarker , 'animation_changed', function(){
 						this.infowindow.open(map, this);
-					});					
+					});		
+					google.maps.event.addListener(myStopMarker , 'click', function(){
+						this.infowindow.open(map, this);
+					});						
 					stops.push(myStopMarker);	
 					
 					
