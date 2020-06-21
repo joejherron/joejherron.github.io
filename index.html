@@ -329,6 +329,8 @@
 			// Isolate the vehicle locations and put that in its own function so that you can do that without creating directions etc all over
 			clearMarkers(markers);
 			markers = [];
+			clearMarkers(stops);
+			stops = [];
 			var myRoute = document.getElementById("selectRoute").value;
 			addDirectionList(myRoute);
 			//if (myRouteLayer) {myRouteLayer.setMap(null)};
