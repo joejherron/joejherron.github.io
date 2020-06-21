@@ -284,6 +284,10 @@
 		};
 		
 		function selectRoute() {
+			//
+			//figure out how to re-center the map
+			map.setCenter({lat: 44.986656, lng: -93.258133});
+			map.setZoom(11);
 			// Isolate the vehicle locations and put that in its own function so that you can do that without creating directions etc all over
 			clearMarkers(markers);
 			var myRoute = document.getElementById("selectRoute").value;
