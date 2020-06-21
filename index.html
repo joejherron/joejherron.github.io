@@ -169,15 +169,28 @@
 					var latitude = text.features[0].geometry.y;
 					var myStopLatLng = new google.maps.LatLng([latitude],[longitude]);
 					boundsArray.push(myStopLatLng);
-					//var stopInfoWindow = new google.maps.InfoWindow({
-					//	content: 'test',
-					//});
+					var stopInfoWindow = new google.maps.InfoWindow({
+						content: c,
+					});
 					var myStopMarker = new google.maps.Marker({
 						position: myStopLatLng,
-					//	infowindow: stopInfoWindow,
+						infowindow: stopInfoWindow,
 						map: map,
 						animation: google.maps.Animation.DROP,
+						//label: s,
+						//icon: {
+						//	path: google.maps.SymbolPath.CIRCLE,
+						//	scale: 20,
+						//	fillOpacity: 0.3,
+						//	fillColor: 'red',
+						//	strokeColor: 'black',
+						//	strokeOpacity: 1.0,
+						//	strokeWeight: 1
+						//}
 					});
+					google.maps.event.addListener(myStopMarker , 'animation_changed', function(){
+						this.infowindow.open(map, this);
+					});					
 					stops.push(myStopMarker);	
 					
 					
