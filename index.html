@@ -196,12 +196,12 @@
 					});						
 					stops.push(myStopMarker);	
 					
-					
-					var mapBounds = new google.maps.LatLngBounds();
-					for (var i = 0; i < boundsArray.length; i++) {
-						mapBounds.extend(boundsArray[i]);
-					};
-					map.fitBounds(mapBounds);
+					//See note in addNexTripStop(). This was supposed to take the coords of the upcoming bus from addNexTripStop() and the selected stop and zoom the map to fit only those two.
+					//var mapBounds = new google.maps.LatLngBounds();
+					//for (var i = 0; i < boundsArray.length; i++) {
+					//	mapBounds.extend(boundsArray[i]);
+					//};
+					//map.fitBounds(mapBounds);
 				};
 			};
 		};
@@ -246,11 +246,14 @@
 					//add a link to MetroTransit for more departure times
 					var urlMore = "https://www.metrotransit.org/nextrip/" + r + "/" + d + "/" + s;
 					cell2.innerHTML+="<br><a target=\"_blank\" href=\""+urlMore+"\">(More)</a>";
-					var latitude = upcomingLatitudes[0].childNodes[0].nodeValue;
-					var longitude = upcomingLongitudes[0].childNodes[0].nodeValue;
-					var myUpcomingLatLng = new google.maps.LatLng([latitude],[longitude]);
-					if (boundsArray.length > 0) {boundsArray = []}; // clear if we have an upcoming bus and a selected stop already
-					boundsArray.push(myUpcomingLatLng);
+					
+					//In conjunction with plotSelectedStop, this code was intended to make a boundary using the selected stop and the soonest upcoming bus location 
+					//However, I discovered on 1/26/2022 that NexTrip doesn't seem to be providing the "VehicleLatitude" and "VehicleLongitude" nodes anymore. Bummer. 
+					//var latitude = upcomingLatitudes[0].childNodes[0].nodeValue;
+					//var longitude = upcomingLongitudes[0].childNodes[0].nodeValue;
+					//var myUpcomingLatLng = new google.maps.LatLng([latitude],[longitude]);
+					//if (boundsArray.length > 0) {boundsArray = []}; // clear if we have an upcoming bus and a selected stop already
+					//boundsArray.push(myUpcomingLatLng);
 					
 
 				
