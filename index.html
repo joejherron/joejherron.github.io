@@ -21,7 +21,19 @@
 				font-family: Lucida Sans Unicode;
 				color: green;
 				font-weight: bold;
-}
+			}
+			.shake {
+			  animation: shake-animation 1s ease;
+			  animation-iteration-count: 5;
+			  transform-origin: 50% 50%;
+			}
+			@keyframes shake-animation {
+			 0% { transform: translateX(0) }
+			 25% { transform: translateX(5px) }
+			 50% { transform: translateX(-5px) }
+			 75% { transform: translateX(5px) }
+			 100% { transform: translateX(0) }
+			}
 		</style>
 	</head>
 	<body onload="addRouteList();">
@@ -425,7 +437,7 @@
 		};
 	</script>
 
-	<div id="divUserControls" style="background-color: rgba(255, 255, 255, 0.7); border-style: solid; border-color: lightgrey; border-width: 1px; padding: 5px; position: absolute; visibility: visible; left: 3px; top: 3px; z-index:1">
+	<div id="divUserControls" style="background-color: rgba(255, 255, 255, 0.7); border-style: solid; border-color: lightgrey; border-width: 1px; padding: 5px; position: absolute; visibility: visible; left: 3px; top: 3px; z-index:1" class="shake">
 		<table id="tblUserControls">
 			<tbody>
 
