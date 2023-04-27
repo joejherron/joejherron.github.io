@@ -73,33 +73,45 @@
 		
 		function addRouteList() {
 			var xhr = new XMLHttpRequest();
+			xhr.overrideMimeType("application/json");
 			var url = "https://svc.metrotransit.org/NexTrip/Routes";
 			xhr.open("GET", url, true);
 			xhr.send();
 			xhr.onreadystatechange = function() {
 				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {
-					var table = document.getElementById("tblUserControls");
+                    var table = document.getElementById("tblUserControls");
 					//deleteTableRows(["addNexTripStopRow","addStopsListRow","addDirectionListRow"], table);					
 					var row = table.insertRow();
 					row.id = "addRouteListRow";
 					var cell1 = row.insertCell(0);
 					var cell2 = row.insertCell(1);										
-					var xml = xhr.responseXML;
-					var routeNames = xml.getElementsByTagName("Description"); 
-					var routeValues = xml.getElementsByTagName("Route");
+					//var xml = xhr.responseXML;		
+					var text = xhr.responseText;
+					text = JSON.parse(text);
+					//var routeNames = text.route_id; //xml.getElementsByTagName("Description"); 
+					//var routeValues = text.route_label; //xml.getElementsByTagName("Route");
 					cell1.innerHTML = "<b>Route: </b>";
 					cell1.align = "right";
 					cell2.innerHTML = "<select id = \"selectRoute\" onChange=\"selectRoute()\"><option></option></select>";
 					var selectRoutes = document.getElementById('selectRoute');
-					for (var i=0; i < routeNames.length; i++) {
+					//for (var i=0; i < routeNames.length; i++) {
+					//	var newRoute = document.createElement("option");
+					//	newRoute.value = routeValues[i]; // routeValues[i].childNodes[0].nodeValue;
+					//	newRoute.text = routeNames[i]; // routeNames[i].childNodes[0].nodeValue;
+					//	selectRoutes.add(newRoute);
+					//};
+					for (var i=0; i < text.length; i++) {
+                        
 						var newRoute = document.createElement("option");
-						newRoute.value = routeValues[i].childNodes[0].nodeValue;
-						newRoute.text = routeNames[i].childNodes[0].nodeValue;
+						newRoute.value = text[i].route_id; // routeValues[i].childNodes[0].nodeValue;
+						newRoute.text = text[i].route_label; // routeNames[i].childNodes[0].nodeValue;
 						selectRoutes.add(newRoute);
-					};
+                        
+					};                    
 				};
 			};
 		};		
+		
 		
 		function addDirectionList(r) {
 			var xhr = new XMLHttpRequest();
@@ -373,64 +385,58 @@
 			drawRoute(myRoute);
 			fitRouteBounds(myRoute);
 			var xhr = new XMLHttpRequest();
-			var url = "https://svc.metrotransit.org/NexTrip/VehicleLocations/" + myRoute;
+			xhr.overrideMimeType("application/json");
+			//var url = "https://svc.metrotransit.org/NexTrip/VehicleLocations/" + myRoute;
+			var url = "https://svc.metrotransit.org/NexTrip/Vehicles/" + myRoute; //MetroTransit changed the URL for the API
 			xhr.open("GET", url, true);
 			xhr.send();			
 			xhr.onreadystatechange = function() {
 				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {
-					var xml = xhr.responseXML;
-					
+					//var xml = xhr.responseXML;
+					var text = xhr.responseText;
+					text = JSON.parse(text);
 					//Each bus has a VehicleLocation containing many child elements describing the bus. Store the entire collection in locs.
 					//Can I just skip "VehicleLocation" and go right to "VehicleLatitude", etc like I did with the other APIs?
-					var locs = xml.getElementsByTagName("VehicleLocation"); 
+					//var locs = xml.getElementsByTagName("VehicleLocation"); 
 					
 					//Loop through each VehicleLocation (locs[n]), set up an instance (loc) and store the attributes, such as VehicleLatitude and VehicleLongitude
-					for (var i = 0; i < locs.length; i++) { 
-						var loc = locs[i];
-						var lats = loc.getElementsByTagName("VehicleLatitude");
-						var longs = loc.getElementsByTagName("VehicleLongitude");
-						var datetimes = loc.getElementsByTagName("LocationTime");
-						var directions = loc.getElementsByTagName("Direction");
-						//I'm making the assumption that there are an equal number of every attribute in each "loc" instance (locs[i]) and I'm using lats.length to stand in for the length of any individual collection rather than create a new loop for each attribute collection. This way I loop through once and assign everything. 
-						for (var j = 0; j < lats.length; j++) {
-							var latitude = lats[j].childNodes[0].nodeValue;
-							var longitude = longs[j].childNodes[0].nodeValue;
-							var datetime = datetimes[j].childNodes[0].nodeValue;
-							var time = datetime.substring(datetime.indexOf("T")+1,datetime.length)
-							var directionnumber = Number(directions[j].childNodes[0].nodeValue);
-							var direction;
-							var color;
-							if (directionnumber === 3) {direction="W"; color="blue";} 
-								else if (directionnumber === 2) {direction="E"; color="green";} 
-								else if (directionnumber === 4) {direction="N"; color="blue";} 
-								else if (directionnumber === 1) {direction="S"; color="green";} 
-								else {direction = "X"};
-							var markerLatLng = new google.maps.LatLng([latitude],[longitude]);
-							var markerInfoWindow = new google.maps.InfoWindow({
-								content:'Reported @ ' + time,
-								//position: markerLatLng,
-							});
-							var marker = new google.maps.Marker({
-								position: markerLatLng,
-								infowindow: markerInfoWindow,
-								map: map,
-								//title: 'Reported @ ' + time,
-								label: direction,
-								icon: {
-									path: google.maps.SymbolPath.CIRCLE,
-									scale: 10,
-									fillOpacity: 0.3,
-									fillColor: color,
-									strokeColor: 'black',
-									strokeOpacity: 1.0,
-									strokeWeight: 1
-								}
-							});
-							markers.push(marker);
-							google.maps.event.addListener(marker , 'click', function(){
-								this.infowindow.open(map, this);
-							});
-						};
+					for (var i = 0; i < text.length; i++) { 
+						var lat = text[i].latitude; //loc.getElementsByTagName("VehicleLatitude");
+						var long = text[i].longitude; //loc.getElementsByTagName("VehicleLongitude");
+						var datetime = text[i].location_time; //loc.getElementsByTagName("LocationTime");
+						var direction = text[i].direction; //loc.getElementsByTagName("Direction");
+                        //var directionnumber = text[i].direction_id;
+				        var color;    
+                        if (direction === "WB") {direction="W"; color="blue";} 
+                            else if (direction === "EB") {direction="E"; color="green";} 
+                            else if (direction === "NB") {direction="N"; color="blue";} 
+                            else if (direction === "SB") {direction="S"; color="green";} 
+                            else {direction = "X"};                        
+                        var markerLatLng = new google.maps.LatLng([lat],[long]);
+                        var markerInfoWindow = new google.maps.InfoWindow({
+                            content:'Reported @ ' + datetime,
+                            //position: markerLatLng,
+                        });
+                        var marker = new google.maps.Marker({
+                            position: markerLatLng,
+                            infowindow: markerInfoWindow,
+                            map: map,
+                            //title: 'Reported @ ' + time,
+                            label: direction,
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillOpacity: 0.3,
+                                fillColor: color,
+                                strokeColor: 'black',
+                                strokeOpacity: 1.0,
+                                strokeWeight: 1
+                            }
+                        });
+                        markers.push(marker);
+                        google.maps.event.addListener(marker , 'click', function(){
+                            this.infowindow.open(map, this);
+                        });
 					};
 				};
 			};
