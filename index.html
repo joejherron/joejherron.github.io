@@ -130,7 +130,6 @@
 					//var xml = xhr.responseXML;	
 					var text = xhr.responseText;
 					text = JSON.parse(text);
-                    //console.log(text);
 					// xml.getElementsByTagName("Text"); 
 					// xml.getElementsByTagName("Value");
 					cell1.innerHTML = "<b>Direction: </b>";
@@ -141,7 +140,6 @@
 						var newDirection = document.createElement("option");       
 						newDirection.value = text[i].direction_id; // dirValues[i].childNodes[0].nodeValue;
 						newDirection.text = text[i].direction_name; //dirNames[i].childNodes[0].nodeValue;
-                        console.log(newDirection);
 						selectDirections.add(newDirection);
 					};
 				};
@@ -255,11 +253,28 @@
 					//var xml = xhr.responseXML;
 					var text = xhr.responseText;
 					text = JSON.parse(text);
-					console.log(text);
 					var upcomingDepartures = text.departures; //xml.getElementsByTagName("DepartureText"); 
+					 // "departures": [
+					 //   {
+					 //     "actual": true,
+					 //     "trip_id": "string",
+					 //     "stop_id": 0,
+					 //     "departure_text": "string",
+					 //     "departure_time": 0,
+					 //     "description": "string",
+					 //     "gate": "string",
+					 //     "route_id": "string",
+					 //     "route_short_name": "string",
+					 //     "direction_id": 0,
+					 //     "direction_text": "string",
+					 //     "terminal": "string",
+					 //     "schedule_relationship": "string"
+					 //   }							
 					//var upcomingLatitudes = xml.getElementsByTagName("VehicleLatitude");
 					//var upcomingLongitudes = xml.getElementsByTagName("VehicleLongitude");
-					
+					var terminal0 = JSON.parse(JSON.stringify(upcomingDepartures[0].terminal, function (key, value) {return (value === undefined) ? "" : value}));
+					var terminal1 = JSON.parse(JSON.stringify(upcomingDepartures[1].terminal, function (key, value) {return (value === undefined) ? "" : value}));
+					var terminal2 = JSON.parse(JSON.stringify(upcomingDepartures[2].terminal, function (key, value) {return (value === undefined) ? "" : value}));					
 					var table = document.getElementById("tblUserControls");
 					deleteTableRows(["addNexTripStopRow"], table);
 					var row = table.insertRow();
@@ -271,11 +286,12 @@
 					cell1.style.verticalAlign = "top";
 					var cell2 = row.insertCell(1);
 					cell2.style.verticalAlign = "top";
-					cell2.innerHTML += upcomingDepartures[0].departure_text;
+					
+					cell2.innerHTML += upcomingDepartures[0].departure_text + " (" + r + terminal0 + ")";
 					//add the refresh icon next to the first upcoming departure
 					cell2.innerHTML += "&nbsp&nbsp<a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
-					cell2.innerHTML += "<br/>" + upcomingDepartures[1].departure_text;
-					cell2.innerHTML += "<br/>" + upcomingDepartures[2].departure_text;
+					cell2.innerHTML += "<br/>" + upcomingDepartures[1].departure_text + " (" + r + terminal1 + ")";
+					cell2.innerHTML += "<br/>" + upcomingDepartures[2].departure_text + " (" + r + terminal2 + ")";
 					//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
 					//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
 					//The above pattern was discontinued, I could try this: https://www.metrotransit.org/nextrip/11/1/LW2S where LW2S is the Node ID, 11 is the route, and 1 is the direction. 
@@ -417,6 +433,10 @@
 						var long = text[i].longitude; //loc.getElementsByTagName("VehicleLongitude");
 						var datetime = text[i].location_time; //loc.getElementsByTagName("LocationTime");
 						var direction = text[i].direction; //loc.getElementsByTagName("Direction");
+						var terminal = JSON.parse(JSON.stringify(text[i].terminal, function (key, value) {return (value === undefined) ? "" : value}));
+						var bearing = JSON.parse(JSON.stringify(text[i].bearing, function (key, value) {return (value === undefined) ? "" : value}));
+						var odometer = JSON.parse(JSON.stringify(text[i].odometer, function (key, value) {return (value === undefined) ? "" : value}));
+						var speed = JSON.parse(JSON.stringify(text[i].speed, function (key, value) {return (value === undefined) ? "" : value}));
                         //var directionnumber = text[i].direction_id;
 				        var color;    
                         if (direction === "WB") {direction="W"; color="blue";} 
@@ -425,8 +445,14 @@
                             else if (direction === "SB") {direction="S"; color="green";} 
                             else {direction = "X"};                        
                         var markerLatLng = new google.maps.LatLng([lat],[long]);
+						var contentString =
+							'<b>Route ' + myRoute + terminal + '</b><br>' + 
+							'Reported @' + datetime //+ '<br>' + 
+							//'Bearing: ' + bearing + '<br>' + 
+							//'Odometer: ' + odometer + '<br>' + 
+							//'Speed: ' + speed + '<br>'
                         var markerInfoWindow = new google.maps.InfoWindow({
-                            content:'Reported @ ' + datetime,
+                            content:contentString //'Reported @ ' + datetime,
                             //position: markerLatLng,
                         });
                         var marker = new google.maps.Marker({
