@@ -272,32 +272,33 @@
 					 //   }							
 					//var upcomingLatitudes = xml.getElementsByTagName("VehicleLatitude");
 					//var upcomingLongitudes = xml.getElementsByTagName("VehicleLongitude");
-					var terminal0 = JSON.parse(JSON.stringify(upcomingDepartures[0].terminal, function (key, value) {return (value === undefined) ? "" : value}));
-					var terminal1 = JSON.parse(JSON.stringify(upcomingDepartures[1].terminal, function (key, value) {return (value === undefined) ? "" : value}));
-					var terminal2 = JSON.parse(JSON.stringify(upcomingDepartures[2].terminal, function (key, value) {return (value === undefined) ? "" : value}));					
 					var table = document.getElementById("tblUserControls");
 					deleteTableRows(["addNexTripStopRow"], table);
 					var row = table.insertRow();
 					row.id = "addNexTripStopRow";
-					var cell1 = row.insertCell(0);
+					var cell1 = row.insertCell(0);	
 					cell1.innerHTML = "<b>NexTrip: </b>";
-					//cell1.innerHTML += "<br/><br/><a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
 					cell1.align = "right";
 					cell1.style.verticalAlign = "top";
 					var cell2 = row.insertCell(1);
-					cell2.style.verticalAlign = "top";
-					
-					cell2.innerHTML += upcomingDepartures[0].departure_text + " (" + r + terminal0 + ")";
-					//add the refresh icon next to the first upcoming departure
-					cell2.innerHTML += "&nbsp&nbsp<a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
-					cell2.innerHTML += "<br/>" + upcomingDepartures[1].departure_text + " (" + r + terminal1 + ")";
-					cell2.innerHTML += "<br/>" + upcomingDepartures[2].departure_text + " (" + r + terminal2 + ")";
-					//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
-					//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
-					//The above pattern was discontinued, I could try this: https://www.metrotransit.org/nextrip/11/1/LW2S where LW2S is the Node ID, 11 is the route, and 1 is the direction. 
-					//add a link to MetroTransit for more departure times
+					cell2.style.verticalAlign = "top";	
+					//Only show upcoming 3 departures rather than upcomingDepartures.length
+					var maxDepartures = Math.min(3,upcomingDepartures.length)
+					for (var i = 0; (i < maxDepartures); i++) { 					
+						var terminal = JSON.parse(JSON.stringify(upcomingDepartures[i].terminal, function (key, value) {return (value === undefined) ? "" : value}));
+						cell2.innerHTML += upcomingDepartures[i].departure_text + " (" + r + terminal + ")";
+						if (i==0) {	
+							//add the refresh icon next to the first upcoming departure
+							cell2.innerHTML += "&nbsp&nbsp<a id=\"linkRefreshNexTrip\" title=\"Click to refresh upcoming NexTrip departures\" href=\"#\" onclick=\"addNexTripStop();return false;\" style=\"text-decoration: none;\"><span class=reload>&#x21bb;</span></a>";
+						};
+						cell2.innerHTML += "<br>"
+						//If I had the stop number (not Node ID e.g. UPTS) then I could open up the NexTrip page with upcoming departures:
+						//cell2.innerHTML+="<br><a href=\"https://www.metrotransit.org/NexTripBadge.aspx?stopnumber="+s+"\">(More)</a>"
+						//The above pattern was discontinued, I could try this: https://www.metrotransit.org/nextrip/11/1/LW2S where LW2S is the Node ID, 11 is the route, and 1 is the direction. 
+						//add a link to MetroTransit for more departure times
+					};
 					var urlMore = "https://www.metrotransit.org/nextrip/" + r + "/" + d + "/" + s;
-					cell2.innerHTML+="<br><a target=\"_blank\" href=\""+urlMore+"\">(More)</a>";
+					cell2.innerHTML+="<a target=\"_blank\" href=\""+urlMore+"\">(More)</a>";
 					
 					//In conjunction with plotSelectedStop, this code was intended to make a boundary using the selected stop and the soonest upcoming bus location 
 					//However, I discovered on 1/26/2022 that NexTrip doesn't seem to be providing the "VehicleLatitude" and "VehicleLongitude" nodes anymore. Bummer. 
@@ -306,9 +307,6 @@
 					//var myUpcomingLatLng = new google.maps.LatLng([latitude],[longitude]);
 					//if (boundsArray.length > 0) {boundsArray = []}; // clear if we have an upcoming bus and a selected stop already
 					//boundsArray.push(myUpcomingLatLng);
-					
-
-				
 				};
 			plotSelectedStop(s, c);
 			};
@@ -365,33 +363,34 @@
 			};
 		};
 		
-		function fitRouteBounds(r) {
-			var xhr = new XMLHttpRequest();
-			xhr.overrideMimeType("application/json");
-			var url = "https://arcgis.metc.state.mn.us/server/rest/services/EnterpriseLibrary/TransitRoutes/FeatureServer/0/query?where=route%3D"+r+"&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&distance=&units=esriSRUnit_Foot&relationParam=&outFields=&returnGeometry=true&maxAllowableOffset=&geometryPrecision=&outSR=4326&having=&gdbVersion=&historicMoment=&returnDistinctValues=false&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=true&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&multipatchOption=xyFootprint&resultOffset=&resultRecordCount=&returnTrueCurves=false&returnExceededLimitFeatures=false&quantizationParameters=&returnCentroid=false&sqlFormat=none&resultType=&featureEncoding=esriDefault&f=geojson";
-			xhr.open("GET", url, true);
-			xhr.send();
-			xhr.onreadystatechange = function() {
-				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {			
-					var text = xhr.responseText;
-					text = JSON.parse(text);
-					var extent1StopLatLng = new google.maps.LatLng(text.bbox[1],text.bbox[0]);
-					var extent2StopLatLng = new google.maps.LatLng(text.bbox[3],text.bbox[2]);
-					boundsArray = [];
-					boundsArray.push(extent1StopLatLng);
-					boundsArray.push(extent2StopLatLng);
-					
-					var mapBounds = new google.maps.LatLngBounds();
-					for (var i = 0; i < boundsArray.length; i++) {
-						mapBounds.extend(boundsArray[i]);
-					};
-					map.fitBounds(mapBounds);
-					
-				};
-			};
-		
-		};
-		
+// 2023-08-09 Learned MetroGIS no longer provides bbox to show the boundary of the selected route, so this function won't work
+//		function fitRouteBounds(r) {
+//			var xhr = new XMLHttpRequest();
+//			xhr.overrideMimeType("application/json");
+//			var url = "https://arcgis.metc.state.mn.us/server/rest/services/EnterpriseLibrary/TransitRoutes/FeatureServer/0/query?where=route%3D"+r+"&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&distance=&units=esriSRUnit_Foot&relationParam=&outFields=&returnGeometry=true&maxAllowableOffset=&geometryPrecision=&outSR=4326&having=&gdbVersion=&historicMoment=&returnDistinctValues=false&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=true&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&multipatchOption=xyFootprint&resultOffset=&resultRecordCount=&returnTrueCurves=false&returnExceededLimitFeatures=false&quantizationParameters=&returnCentroid=false&sqlFormat=none&resultType=&featureEncoding=esriDefault&f=geojson";
+//			xhr.open("GET", url, true);
+//			xhr.send();
+//			xhr.onreadystatechange = function() {
+//				if (xhr.readyState === 4 && (xhr.status === 200 || xhr.status === 0)) {			
+//					var text = xhr.responseText;
+//					text = JSON.parse(text);
+//					var extent1StopLatLng = new google.maps.LatLng(text.bbox[1],text.bbox[0]);
+//					var extent2StopLatLng = new google.maps.LatLng(text.bbox[3],text.bbox[2]);
+//					boundsArray = [];
+//					boundsArray.push(extent1StopLatLng);
+//					boundsArray.push(extent2StopLatLng);
+//					
+//					var mapBounds = new google.maps.LatLngBounds();
+//					for (var i = 0; i < boundsArray.length; i++) {
+//						mapBounds.extend(boundsArray[i]);
+//					};
+//					map.fitBounds(mapBounds);
+//					
+//				};
+//			};
+//		
+//		};
+//		
 		function selectRoute() {
 			//
 			//figure out how to re-center the map
@@ -411,7 +410,7 @@
 			//		clickable: false
 			//	});
 			drawRoute(myRoute);
-			fitRouteBounds(myRoute);
+			//fitRouteBounds(myRoute);
 			var xhr = new XMLHttpRequest();
 			xhr.overrideMimeType("application/json");
 			//var url = "https://svc.metrotransit.org/NexTrip/VehicleLocations/" + myRoute;
